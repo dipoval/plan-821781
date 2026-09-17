@@ -951,6 +951,11 @@
       var exCap = (EXERCISES[exId] && EXERCISES[exId].capFuerza) || 100;
       var topThis = Math.min(fuerzaTopForWeek(week), exCap);
       var topPrev = Math.min(fuerzaTopForWeek(week-1), exCap);
+      // El aviso solo tiene sentido cuando el % nominal realmente sube: si el cap
+      // de seguridad deja ambas semanas en el mismo tope, o la onda retrocede al
+      // reiniciar dentro del bloque (semana 5/17, 99%→90%), no hay "% sube pero
+      // el kg no cambia" que explicar — sería un aviso con causa equivocada.
+      if(topThis <= topPrev) return false;
       var kgThis = OneRM.kgLabel(exId, topThis, rmOverride);
       var kgPrev = OneRM.kgLabel(exId, topPrev, rmOverride);
       return kgThis!=="—" && kgThis===kgPrev;
@@ -1249,9 +1254,11 @@
       var storageKey = "chk_pd"+programDay+"_"+exId+"_"+first+(last!==first ? ("-"+last) : "");
       var checked = Storage.lsGet(storageKey) === "1";
       var serieLabel = (idxs.length===1) ? ("Serie "+(first+1)) : ("Series "+(first+1)+"-"+(last+1));
-      var repsLo = group.rungs[0].reps, repsHi = group.rungs[group.rungs.length-1].reps;
-      var repsMin = Math.min(repsLo, repsHi), repsMax = Math.max(repsLo, repsHi);
-      var repsLabel = (repsMin===repsMax) ? (repsMin+" reps") : (repsMin+"-"+repsMax+" reps");
+      // Reps por serie, no un rango: un rango ("6-12 reps") se lee como "haz entre
+      // 6 y 12 repeticiones", perdiendo la rampa descendente real de la
+      // hipertrofia/tensión moderada (ej. 12/10/8/6). El peso fusiona porque es
+      // el mismo kg real; las reps de cada serie siguen siendo la prescripción.
+      var repsLabel = group.rungs.map(function(r){ return r.reps; }).join("/") + " reps";
       var pctLo = group.rungs[0].pct, pctHi = group.rungs[group.rungs.length-1].pct;
       var pctLabel = (pctLo===pctHi) ? (pctLo+"% 1RM") : (pctLo+"-"+pctHi+"% 1RM");
       return '<label class="rung-row'+(checked?" is-done":"")+'" data-chk-key="'+storageKey+'">'+
